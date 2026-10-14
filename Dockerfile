@@ -1,6 +1,6 @@
 # The example slowapp. The base is pinned by tag and digest; Dependabot opens a PR when
 # slowapp-base releases (monthly at least, for Debian's security updates).
-FROM ghcr.io/mike-anderson/slowapp-python:1.1.0@sha256:d1542bced1c247f49dcfd34ed2b1a5b6cd36b8113cb7f5d2699b251b3124daeb
+FROM ghcr.io/mike-anderson/slowapp-python:1.2.0@sha256:5cc196d93d9960643d51eac7a49f46fe4eb9a1c4f68deba0f60579ea9559a532
 COPY slowapp.toml /app/slowapp.toml
 COPY moon /opt/app/moon
 ENV PYTHONPATH=/opt/app:/opt/slowapp
