@@ -3,12 +3,18 @@
 [app]
 id = "moon"
 title = "Moon"
-contract = 3
+contract = 4
 image = "ghcr.io/mike-anderson/slowapp-example"
 memory = "48m"
 tmp = "8m"
 timeout_s = 30
 network = "none"
+# The catalog page's words (slowboard.io and a hub's Apps pages). Add `license` (an SPDX
+# expression) once the repo has one; until then validate warns that the page shows a blank.
+blurb = "The moon's phase, and when the next full and new moons are."
+about = "Today's moon as it looks from your hemisphere, how much of it is lit, and the dates of the next full and new moons, with the week ahead on a second card."
+ink = "yellow"
+repo = "https://github.com/mike-anderson/slowapp-example"
 
 [settings]
 south = { type = "boolean", default = false, label = "Southern hemisphere (the lit side flips)" }
