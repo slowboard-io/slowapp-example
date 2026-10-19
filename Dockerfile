@@ -1,6 +1,6 @@
-# The example slowapp. The base is pinned by tag and digest; Dependabot opens a PR when
-# slowapp-base releases (monthly at least, for Debian's security updates).
-FROM ghcr.io/mike-anderson/slowapp-python:1.1.0@sha256:d1542bced1c247f49dcfd34ed2b1a5b6cd36b8113cb7f5d2699b251b3124daeb
+# The example slowapp. The base is pinned by tag and digest; Dependabot opens one PR when
+# slowapp-base releases, bumping this and the workflow ref in .github/workflows/app.yml together.
+FROM ghcr.io/mike-anderson/slowapp-python:1.4.1@sha256:eb97f920f1bce8efb7a3eb4827cbafff53672f50102d730ee955ae8f7abcde1b
 COPY slowapp.toml /app/slowapp.toml
 COPY moon /opt/app/moon
 ENV PYTHONPATH=/opt/app:/opt/slowapp
