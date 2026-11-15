@@ -8,7 +8,7 @@ its fixture is an empty directory. **Use this repo as a template** for a new app
 | File | What it is |
 |---|---|
 | `slowapp.toml` | The manifest: `network = "none"`, 48 MB, one `render` job, one slot-sized feed `phase`, one setting, two examples, and the catalog page's words (`blurb`, `about`, `ink`, `repo`) ([reference](https://github.com/mike-anderson/slowapp-base/blob/main/MANIFEST.md)) |
-| `moon/__main__.py` | The job: `@kit.job("render")` writes a deck of two cards, *home* and *the week ahead* |
+| `moon/__main__.py` | The job: `@kit.job("render")` writes the slot feed `phase` (two cards, *home* and *the week ahead*) and, at contract 5, the portrait 540x960 greyscale feed `full` (four cards: home, the next four phases, the next four weeks, the year's full and new moons) |
 | `moon/draw.py` | Drawing in the panel's four inks. Text uses `fontmode = "1"`, because antialiased pixels would fall outside the palette |
 | `moon/phase.py` | The arithmetic |
 | `Dockerfile` | `FROM` the base, pinned by tag and digest |
