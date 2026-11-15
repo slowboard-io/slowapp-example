@@ -19,11 +19,16 @@ def render(ctx):
             Card("home", draw.home(ctx, surface, south), phase.name(t), peek=peek),
             Card("week", draw.week(ctx, surface, south), "The week ahead"),
         ], valid_from=t, valid_until=t + timedelta(hours=6))
-    # A whole greyscale screen (contract 5, g16): one card, for a thin board that shows only it.
+    # A whole greyscale screen (contract 5, g16) for a thin board: home is what it shows, and its
+    # keys step through the rest (the Slowboard 470 keeps the deck and browses it offline).
     surface = ctx.feed("full")
     if surface is not None:
-        ctx.write_feed("full", [Card("home", draw.full(ctx, surface, south), phase.name(t), peek=peek)],
-                       valid_from=t, valid_until=t + timedelta(hours=6))
+        ctx.write_feed("full", [
+            Card("home", draw.full(ctx, surface, south), phase.name(t), peek=peek),
+            Card("phases", draw.phases(ctx, surface, south), "The next four phases"),
+            Card("month", draw.month(ctx, surface, south), "The next four weeks"),
+            Card("year", draw.year(ctx, surface, south), "Full and new moons ahead"),
+        ], valid_from=t, valid_until=t + timedelta(hours=6))
 
 
 kit.main()

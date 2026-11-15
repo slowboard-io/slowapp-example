@@ -1,4 +1,4 @@
-# The example slowapp: the moon's phase for the middle third, and (contract 5) a whole 960x540
+# The example slowapp: the moon's phase for the middle third, and (contract 5) a whole 540x960
 # greyscale screen for a thin battery board (the Slowboard 470). No network, no secrets, no data:
 # everything is computed from the time, so fixture mode needs nothing but `now`.
 [app]
@@ -28,10 +28,11 @@ expected_s = 3
 name = "phase"
 size = "slot"
 
-# The whole screen of a 4.7" 16-grey board: the moon, the facts, the week, when it was drawn.
+# The whole screen of a 4.7" 16-grey board standing tall: the moon, the facts, the week, when it was
+# drawn; then the next four phases, the next four weeks and the year's full and new moons.
 [[feed]]
 name = "full"
-size = "960x540"
+size = "540x960"
 inks = ["g16"]
 
 [[example]]
@@ -51,7 +52,7 @@ feeds = { phase = "456x444.k4" }
 
 [[example]]
 name = "full"
-caption = "7 Oct 2026 on a Slowboard 470: the whole 960x540 greyscale screen"
+caption = "7 Oct 2026 on a Slowboard 470: the whole 540x960 greyscale screen"
 fixture = "fixtures/default"
 now = "2026-10-07T09:00:00-07:00"
-feeds = { full = "960x540.g16" }
+feeds = { full = "540x960.g16" }
