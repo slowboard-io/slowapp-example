@@ -71,42 +71,45 @@ def week(ctx, surface, south):
 
 def full(ctx, surface, south):
     """The whole screen in greys for a thin battery board standing tall (the Slowboard 470 at
-    540x960): the moon large on a night panel, the facts under it, the week below them, and when
-    it was drawn, so a device that holds it for hours still says how old it is."""
+    540x960): the phase and how lit at the top, the moon large on a night panel, the next full and
+    new moons, the week below them, and when it was drawn, so a device that holds it for hours
+    still says how old it is."""
     from datetime import timedelta
     from slowapp_kit import grey, snap_g16
     t = ctx.for_
-    w, h = surface.w, surface.h
     img = ctx.canvas(surface, fill=grey(15))
     d = ImageDraw.Draw(img)
-    s = min(w / 540, h / 960)                     # drawn for 540x960; scales with the surface
+    b = box(surface)
+    s, x, right = b.s, b.left, b.right
 
-    # The night panel on top, the moon in it.
-    top = int(500 * s)
-    d.rectangle((0, 0, w - 1, top - 1), fill=grey(1))
-    r = int(min(w, top) * 0.38)
-    disc(d, w // 2, top // 2, r, t, south, lit=grey(14), dark=grey(3), rim=grey(7), rim_w=max(2, int(3 * s)))
-
-    # The facts, each line shrunk to fit.
-    x, right = int(36 * s), w - int(36 * s)
-
-    def line(y, text, name, size, fill):
-        while size > 12 and d.textlength(text, font=kit.font(name, size)) > right - x:
+    def line(xy, text, name, size, fill, width):
+        while size > 12 and d.textlength(text, font=kit.font(name, size)) > width:
             size -= 1
-        d.text((x, y), text, font=kit.font(name, size), fill=fill, anchor="lt")
+        d.text(xy, text, font=kit.font(name, size), fill=fill, anchor="lt")
 
-    line(top + int(30 * s), phase.name(t), "DejaVuSans-Bold.ttf", int(44 * s), grey(0))
-    line(top + int(90 * s), f"{phase.illumination(t) * 100:.0f}% lit · day {phase.age(t):.1f} of 29.5",
-         "DejaVuSans.ttf", int(26 * s), grey(4))
+    # The head: the phase, and how lit.
+    line((x, b.head_top), phase.name(t), "DejaVuSans-Bold.ttf", int(40 * s), grey(0), b.head_right - x)
+    line((x, b.head_top + int(56 * s)), f"{phase.illumination(t) * 100:.0f}% lit · day {phase.age(t):.1f}",
+         "DejaVuSans.ttf", int(24 * s), grey(4), b.head_right - x)
+
+    # The night panel, the moon in it.
+    top, bottom = b.top, b.top + int(410 * s)
+    d.rounded_rectangle((x - int(12 * s), top, right + int(12 * s) if not b.board else right, bottom),
+                        radius=int(16 * s), fill=grey(1))
+    r = int((bottom - top) * 0.42)
+    disc(d, (x + right) // 2, (top + bottom) // 2, r, t, south, lit=grey(14), dark=grey(3), rim=grey(7),
+         rim_w=max(2, int(3 * s)))
+
+    # The next full and new moons.
     full_at, new_at = phase.next_phase(t, 0.5), phase.next_phase(t, 0.0)
     for i, (label, when) in enumerate(sorted([("Full", full_at), ("New", new_at)], key=lambda p: p[1])):
         days = round((when - t) / timedelta(days=1))
-        line(top + int((140 + 38 * i) * s), f"{label} moon {when:%a %-d %b} · {days} d", "DejaVuSans.ttf",
-             int(26 * s), grey(0))
+        line((x, bottom + int((30 + 40 * i) * s)), f"{label} moon {when:%a %-d %b} · {days} d", "DejaVuSans.ttf",
+             int(26 * s), grey(0), right - x)
 
     # The week ahead: seven small moons.
     small = kit.font("DejaVuSans.ttf", int(20 * s))
-    y = top + int(256 * s)
+    y = bottom + int(150 * s)
     d.line((x, y - int(18 * s), right, y - int(18 * s)), fill=grey(10), width=max(1, int(2 * s)))
     cw = (right - x) / 7
     rr = int(min(cw * 0.38, 26 * s))
@@ -117,9 +120,7 @@ def full(ctx, surface, south):
         d.text((cx, y + int(70 * s)), f"{ti:%a}", font=small, fill=grey(0), anchor="mt")
         d.text((cx, y + int(96 * s)), f"{ti:%-d}", font=small, fill=grey(5), anchor="mt")
 
-    # When it was drawn: the full-cycle check reads this off the glass.
-    d.text((right, h - int(30 * s)), f"drawn {ctx.now:%a %-d %b %H:%M} · for {t:%H:%M}",
-           font=kit.font("DejaVuSans.ttf", int(18 * s)), fill=grey(6), anchor="rb")
+    drawn(ctx, d, b, f"drawn {ctx.now:%a %-d %b %H:%M} · for {t:%H:%M}")
     return snap_g16(img)
 
 
@@ -128,21 +129,63 @@ def full(ctx, surface, south):
 QUARTERS = [(0.0, "New moon"), (0.25, "First quarter"), (0.5, "Full moon"), (0.75, "Last quarter")]
 
 
+class Box:
+    """Where a full-screen card draws. On the Slowboard 470 (540x960) the board owns its key
+    labels (x 336-480, y 16-136), their lane down the right edge (x 480-540, y 0-340) and the app
+    strip (y 900-960), so the head stops short of the labels, the body short of the lane, and the
+    footer sits above the strip. Elsewhere, plain margins."""
+
+    def __init__(self, w, h):
+        self.w, self.h = w, h
+        self.s = s = min(w / 540, h / 960)
+        self.board = (w, h) == (540, 960)
+        self.left = int(36 * s)
+        self.right = 468 if self.board else w - int(36 * s)
+        self.head_top = int(28 * s)
+        self.head_right = 324 if self.board else self.right
+        self.top = int(152 * s) if self.board else int(116 * s)
+        self.foot = 888 if self.board else h - int(30 * s)
+        self.foot_right = w - 24 if self.board else self.right
+        self.bottom = self.foot - int(36 * s)
+
+
+def box(surface):
+    return Box(surface.w, surface.h)
+
+
+def drawn(ctx, d, b, text):
+    from slowapp_kit import grey
+    d.text((b.foot_right, b.foot), text, font=kit.font("DejaVuSans.ttf", int(18 * b.s)), fill=grey(6), anchor="rb")
+
+
 def _g16_page(ctx, surface, title):
-    """A light page with a title, the drawing scale, and the drawn-at line: the shared frame."""
+    """A light page with a title in the head (two lines if it needs them), a rule under it, and the
+    drawn-at line: the shared frame. Returns (image, draw, box)."""
     from slowapp_kit import grey
     img = ctx.canvas(surface, fill=grey(15))
     d = ImageDraw.Draw(img)
-    w, h = img.size
-    s = min(w / 540, h / 960)
-    size = int(36 * s)
-    while size > 16 and d.textlength(title, font=kit.font("DejaVuSans-Bold.ttf", size)) > w - int(72 * s):
+    b = box(surface)
+    width = b.head_right - b.left
+    words = title.split()
+    size = int(34 * b.s)
+    while True:
+        f = kit.font("DejaVuSans-Bold.ttf", size)
+        lines, cur = [], ""
+        for wd in words:
+            if cur and d.textlength(f"{cur} {wd}", font=f) > width:
+                lines.append(cur)
+                cur = wd
+            else:
+                cur = f"{cur} {wd}".strip()
+        lines.append(cur)
+        if (len(lines) <= 2 and all(d.textlength(ln, font=f) <= width for ln in lines)) or size <= 16:
+            break
         size -= 1
-    d.text((int(36 * s), int(36 * s)), title, font=kit.font("DejaVuSans-Bold.ttf", size), fill=grey(0), anchor="lt")
-    d.line((int(36 * s), int(92 * s), w - int(36 * s), int(92 * s)), fill=grey(10), width=max(1, int(2 * s)))
-    d.text((w - int(36 * s), h - int(30 * s)), f"drawn {ctx.now:%a %-d %b %H:%M}",
-           font=kit.font("DejaVuSans.ttf", int(18 * s)), fill=grey(6), anchor="rb")
-    return img, d, s
+    d.multiline_text((b.left, b.head_top), "\n".join(lines), font=f, fill=grey(0), spacing=int(6 * b.s))
+    y = b.top - int(16 * b.s)
+    d.line((b.left, y, b.right, y), fill=grey(10), width=max(1, int(2 * b.s)))
+    drawn(ctx, d, b, f"drawn {ctx.now:%a %-d %b %H:%M}")
+    return img, d, b
 
 
 def phases(ctx, surface, south):
@@ -151,15 +194,15 @@ def phases(ctx, surface, south):
     from datetime import timedelta
     from slowapp_kit import grey, snap_g16
     t = ctx.for_
-    img, d, s = _g16_page(ctx, surface, "The next four phases")
-    w, h = img.size
+    img, d, b = _g16_page(ctx, surface, "The next four phases")
+    s = b.s
     ahead = sorted((phase.next_phase(t, f), label) for f, label in QUARTERS)
-    y0, rh = int(120 * s), int(190 * s)
+    y0, rh = b.top, (b.bottom - b.top) // 4
     r = int(72 * s)
     big, small = kit.font("DejaVuSans-Bold.ttf", int(30 * s)), kit.font("DejaVuSans.ttf", int(24 * s))
     for i, (when, label) in enumerate(ahead):
         cy = y0 + rh * i + rh // 2
-        cx = int(36 * s) + r
+        cx = b.left + r
         # A hair past the moment, so a quarter that is exactly now draws as itself.
         disc(d, cx, cy, r, when + timedelta(minutes=1), south, lit=grey(15), dark=grey(2), rim=grey(2),
              rim_w=max(2, int(3 * s)))
@@ -177,10 +220,10 @@ def month(ctx, surface, south):
     from datetime import timedelta
     from slowapp_kit import grey, snap_g16
     t = ctx.for_
-    img, d, s = _g16_page(ctx, surface, "The next four weeks")
-    w, h = img.size
-    x0, x1, y0 = int(24 * s), w - int(24 * s), int(116 * s)
-    cw, rh = (x1 - x0) / 7, (h - int(70 * s) - y0) / 4
+    img, d, b = _g16_page(ctx, surface, "The next four weeks")
+    s = b.s
+    x0, x1, y0 = b.left - int(12 * s), b.right if b.board else b.right + int(12 * s), b.top
+    cw, rh = (x1 - x0) / 7, (b.bottom - y0) / 4
     r = int(cw * 0.36)
     label, note = kit.font("DejaVuSans.ttf", int(17 * s)), kit.font("DejaVuSans-Bold.ttf", int(15 * s))
     full_at, new_at = phase.next_phase(t, 0.5), phase.next_phase(t, 0.0)
@@ -208,18 +251,19 @@ def year(ctx, surface, south):
     from datetime import timedelta
     from slowapp_kit import grey, snap_g16
     t = ctx.for_
-    img, d, s = _g16_page(ctx, surface, "Full and new moons ahead")
-    w, h = img.size
+    img, d, b = _g16_page(ctx, surface, "Full and new moons ahead")
+    s = b.s
     row, head = kit.font("DejaVuSans.ttf", int(22 * s)), kit.font("DejaVuSans-Bold.ttf", int(20 * s))
     full_at, new_at = phase.next_phase(t, 0.5), phase.next_phase(t, 0.0)
     month = timedelta(days=phase.SYNODIC_DAYS)
-    x, xn = int(36 * s), int(300 * s)
-    d.text((x + int(44 * s), int(116 * s)), "Full moon", font=head, fill=grey(0), anchor="lt")
-    d.text((xn, int(116 * s)), "New moon", font=head, fill=grey(0), anchor="lt")
-    rh, rr = int(62 * s), int(14 * s)
+    x, xn = b.left, b.left + int(256 * s)
+    d.text((x + int(44 * s), b.top), "Full moon", font=head, fill=grey(0), anchor="lt")
+    d.text((xn, b.top), "New moon", font=head, fill=grey(0), anchor="lt")
+    first = b.top + int(48 * s)
+    rh, rr = (b.bottom - first) // 12, int(14 * s)
     for k in range(12):
         f, n = full_at + month * k, new_at + month * k
-        y = int(166 * s) + k * rh
+        y = first + k * rh
         disc(d, x + int(16 * s), y + int(13 * s), rr, f + timedelta(minutes=1), south, lit=grey(15), dark=grey(3),
              rim=grey(3), rim_w=1)
         d.text((x + int(44 * s), y), f"{f:%a %-d %b %y}", font=row, fill=grey(0), anchor="lt")
