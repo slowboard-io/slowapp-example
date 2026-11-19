@@ -23,11 +23,14 @@ def render(ctx):
     # keys step through the rest (the Slowboard 470 keeps the deck and browses it offline).
     surface = ctx.feed("full")
     if surface is not None:
+        cards = [draw.full(ctx, surface, south), draw.phases(ctx, surface, south),
+                 draw.month(ctx, surface, south), draw.year(ctx, surface, south)]
+        cards = [draw.key_hints(img, surface, i) for i, img in enumerate(cards)]  # where its keys go
         ctx.write_feed("full", [
-            Card("home", draw.full(ctx, surface, south), phase.name(t), peek=peek),
-            Card("phases", draw.phases(ctx, surface, south), "The next four phases"),
-            Card("month", draw.month(ctx, surface, south), "The next four weeks"),
-            Card("year", draw.year(ctx, surface, south), "Full and new moons ahead"),
+            Card("home", cards[0], phase.name(t), peek=peek),
+            Card("phases", cards[1], "The next four phases"),
+            Card("month", cards[2], "The next four weeks"),
+            Card("year", cards[3], "Full and new moons ahead"),
         ], valid_from=t, valid_until=t + timedelta(hours=6))
 
 
