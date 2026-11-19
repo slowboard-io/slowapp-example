@@ -20,24 +20,32 @@ class Phase(unittest.TestCase):
 
 
 class KeepClear(unittest.TestCase):
-    """On the Slowboard 470 the board draws its key labels, their lane and the app strip over the
-    card: every full card leaves them blank."""
-    AREAS = [(336, 16, 144, 120), (480, 0, 60, 340), (0, 900, 540, 60)]
+    """On the Slowboard 470 the board draws the app strip over the card, so every full card leaves
+    it blank; down the right edge, where the keys are, there's only the card's own key hints."""
 
-    def test_the_full_deck_leaves_the_boards_areas_blank(self):
+    def cards(self):
         from types import SimpleNamespace
         from PIL import Image
-        from slowapp_kit import grey
         from moon import draw
         t = datetime(2026, 11, 18, 10, tzinfo=timezone(timedelta(hours=-7)))
         ctx = SimpleNamespace(for_=t, now=t, canvas=lambda s, fill: Image.new("RGB", (s.w, s.h), fill))
         surface = SimpleNamespace(w=540, h=960, inks="g16")
-        for f in (draw.full, draw.phases, draw.month, draw.year):
-            img = f(ctx, surface, False).convert("RGB")
-            for x, y, w, h in self.AREAS:
-                colours = img.crop((x, y, x + w, y + h)).getcolors()
-                self.assertEqual(colours, [(w * h, grey(15))], f"{f.__name__}: something in {(x, y, w, h)}")
+        fs = (draw.full, draw.phases, draw.month, draw.year)
+        return [(f.__name__, draw.key_hints(f(ctx, surface, False), surface, i).convert("RGB")) for i, f in enumerate(fs)]
 
+    def test_the_full_deck_leaves_the_strip_blank(self):
+        from slowapp_kit import grey
+        for name, img in self.cards():
+            self.assertEqual(img.crop((0, 900, 540, 960)).getcolors(), [(540 * 60, grey(15))], name)
+
+    def test_its_key_hints_and_nothing_else_by_the_keys(self):
+        from slowapp_kit import grey
+        blank = lambda img, box: img.crop(box).getcolors() == [((box[2] - box[0]) * (box[3] - box[1]), grey(15))]  # noqa: E731
+        for name, img in self.cards():
+            self.assertFalse(blank(img, (470, 188, 540, 212)), f"{name}: no hint by K1")
+            self.assertFalse(blank(img, (470, 298, 540, 322)), f"{name}: no hint by K2")
+            for box in ((470, 0, 540, 152), (470, 214, 540, 296), (470, 324, 540, 340)):
+                self.assertTrue(blank(img, box), f"{name}: something else by the keys {box}")
 
 if __name__ == "__main__":
     unittest.main()

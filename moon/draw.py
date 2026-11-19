@@ -130,10 +130,9 @@ QUARTERS = [(0.0, "New moon"), (0.25, "First quarter"), (0.5, "Full moon"), (0.7
 
 
 class Box:
-    """Where a full-screen card draws. On the Slowboard 470 (540x960) the board owns its key
-    labels (x 336-480, y 16-136), their lane down the right edge (x 480-540, y 0-340) and the app
-    strip (y 900-960), so the head stops short of the labels, the body short of the lane, and the
-    footer sits above the strip. Elsewhere, plain margins."""
+    """Where a full-screen card draws. On the Slowboard 470 (540x960) the board owns the app strip
+    (y 900-960), so the footer sits above it, and the body stops short of the right edge (x 468),
+    where the keys are and the card says what they do (key_hints). Elsewhere, plain margins."""
 
     def __init__(self, w, h):
         self.w, self.h = w, h
@@ -142,11 +141,38 @@ class Box:
         self.left = int(36 * s)
         self.right = 468 if self.board else w - int(36 * s)
         self.head_top = int(28 * s)
-        self.head_right = 324 if self.board else self.right
+        self.head_right = self.right
         self.top = int(152 * s) if self.board else int(116 * s)
         self.foot = 888 if self.board else h - int(30 * s)
         self.foot_right = w - 24 if self.board else self.right
         self.bottom = self.foot - int(36 * s)
+
+
+# The full feed's cards in order, as the key hints name them (__main__ writes them in this order).
+FULL_DECK = ("Now", "Phases", "Month", "Year")
+# The Slowboard 470's keys down its right edge: K1 (■) steps back, K2 (●) forward.
+KEY1_Y, KEY2_Y = 200, 310
+
+
+def key_hints(img, surface, i):
+    """Card `i` of the full deck with its key hints, on the Slowboard 470: level with each key, at
+    the right edge, where it goes ("‹ Year" by K1, "Phases ›" by K2; the deck wraps). Small and
+    grey, in the margin the body leaves. Other surfaces: unchanged."""
+    from slowapp_kit import grey, snap_g16
+    if (surface.w, surface.h) != (540, 960):
+        return img
+    img = img.convert("RGB")
+    d = ImageDraw.Draw(img)
+    n = len(FULL_DECK)
+    # One size for the whole deck, the largest the longest hint fits the margin at (468-534).
+    every = [f"‹ {c}" for c in FULL_DECK] + [f"{c} ›" for c in FULL_DECK]
+    size = 20
+    while size > 12 and max(d.textlength(t, font=kit.font("DejaVuSansCondensed.ttf", size)) for t in every) > 62:
+        size -= 1
+    f = kit.font("DejaVuSansCondensed.ttf", size)
+    for y, text in ((KEY1_Y, f"‹ {FULL_DECK[(i - 1) % n]}"), (KEY2_Y, f"{FULL_DECK[(i + 1) % n]} ›")):
+        d.text((534, y), text, font=f, fill=grey(3), anchor="rm")
+    return snap_g16(img)
 
 
 def box(surface):
